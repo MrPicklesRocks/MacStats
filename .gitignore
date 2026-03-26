@@ -3,6 +3,8 @@
 Pods
 Carthage
 build
+.build
+com.apple.DeveloperTools
 xcuserdata
 
 Stats.dmg

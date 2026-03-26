@@ -19,7 +19,7 @@ public extension NSToolbarItem.Identifier {
 
 class SettingsWindow: NSWindow, NSWindowDelegate, NSToolbarDelegate {
     private static let size: CGSize = CGSize(width: 720, height: 480)
-    private static let frameAutosaveName = "eu.exelban.Stats.Settings.WindowFrame"
+    private static let frameAutosaveName = "com.textd.Stats.Settings.WindowFrame"
     
     private let mainView: MainView = MainView(frame: NSRect(x: 0, y: 0, width: 540, height: 480))
     private let sidebarView: SidebarView = SidebarView(frame: NSRect(x: 0, y: 0, width: 180, height: 480))
@@ -64,7 +64,7 @@ class SettingsWindow: NSWindow, NSWindowDelegate, NSToolbarDelegate {
         
         contentItem.minimumThickness = 540
         
-        let newToolbar = NSToolbar(identifier: "eu.exelban.Stats.Settings.Toolbar")
+        let newToolbar = NSToolbar(identifier: "com.textd.Stats.Settings.Toolbar")
         newToolbar.allowsUserCustomization = false
         newToolbar.autosavesConfiguration = true
         newToolbar.displayMode = .default

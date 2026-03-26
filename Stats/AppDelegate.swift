@@ -40,11 +40,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     internal let updateWindow: UpdateWindow = UpdateWindow()
     internal let setupWindow: SetupWindow = SetupWindow()
     internal let supportWindow: SupportWindow = SupportWindow()
-    internal let updateActivity = NSBackgroundActivityScheduler(identifier: "eu.exelban.Stats.updateCheck")
-    internal let supportActivity = NSBackgroundActivityScheduler(identifier: "eu.exelban.Stats.support")
+    internal let updateActivity = NSBackgroundActivityScheduler(identifier: "com.textd.Stats.updateCheck")
+    internal let supportActivity = NSBackgroundActivityScheduler(identifier: "com.textd.Stats.support")
     internal var clickInNotification: Bool = false
     internal var menuBarItem: NSStatusItem? = nil
     internal var combinedView: CombinedView = CombinedView()
+    private var modulesStarted: Bool = false
     
     internal var pauseState: Bool {
         Store.shared.bool(key: "pause", defaultValue: false)
@@ -65,9 +66,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         self.parseArguments()
         self.parseVersion()
         SMCHelper.shared.checkForUpdate()
+        self.startModules()
         self.setup {
-            modules.reversed().forEach{ $0.mount() }
-            self.settingsWindow.setModules()
+            self.startModules()
         }
         self.defaultValues()
         self.icon()
@@ -129,5 +130,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         
         completionHandler()
+    }
+    
+    private func startModules() {
+        guard !self.modulesStarted else { return }
+        
+        modules.reversed().forEach { $0.mount() }
+        self.settingsWindow.setModules()
+        self.modulesStarted = true
     }
 }
