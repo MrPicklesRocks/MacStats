@@ -1,15 +1,15 @@
 # Stats
 
-<a href="https://github.com/exelban/stats/releases"><p align="center"><img src="https://github.com/exelban/stats/raw/master/Stats/Supporting%20Files/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="120"></p></a>
+<a href="https://github.com/MrPicklesRocks/Stats/releases"><p align="center"><img src="https://github.com/MrPicklesRocks/Stats/raw/master/Stats/Supporting%20Files/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="120"></p></a>
 
-[![Stats](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/stats/menus%3Fv2.3.2.png?v1)](https://github.com/exelban/stats/releases)
-[![Stats](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/stats/popups%3Fv2.3.2.png?v3)](https://github.com/exelban/stats/releases)
+[![Stats](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/stats/menus%3Fv2.3.2.png?v1)](https://github.com/MrPicklesRocks/Stats/releases)
+[![Stats](https://serhiy.s3.eu-central-1.amazonaws.com/Github_repo/stats/popups%3Fv2.3.2.png?v3)](https://github.com/MrPicklesRocks/Stats/releases)
 
 macOS system monitor in your menu bar
 
 ## Installation
 ### Manual
-You can download the latest version [here](https://github.com/exelban/stats/releases/latest/download/Stats.dmg).
+You can download the latest version [here](https://github.com/MrPicklesRocks/Stats/releases/latest/download/Stats.dmg).
 This will download a file called `Stats.dmg`. Open it and move the app to the application folder.
 
 ### Homebrew
@@ -23,6 +23,15 @@ Legacy version for older systems could be found [here](https://mac-stats.com/dow
 
 ## Requirements
 Stats is supported on the released macOS version starting from macOS 11.15 (Big Sur).
+
+## Fork changes
+This fork carries a small set of operational fixes needed to make the app reliable in the current Text'd environment and releasable from a separate GitHub repository.
+
+- Combined modules startup was fixed because module mounting was incorrectly gated behind setup completion, which could leave the combined view blank at launch.
+- Battery monitoring was fixed because the reader aborted a full update when adapter wattage metadata was missing, which left the battery module blank.
+- GPU popup layout was fixed because the stats container height was only calculated on initial creation, so later metrics could render into a compressed card.
+- Bundle IDs, helper IDs, app group wiring, and automation scripts were updated so the app can build, validate, install, and release cleanly under the Text'd team and repo ownership.
+- Update-check and issue/release links were repointed from the old upstream repository to this fork so shipped builds resolve against the correct release source.
 
 ## Features
 Stats is an application that allows you to monitor your macOS system.
@@ -70,10 +79,10 @@ So, if your issue was closed without any response, most probably it already has 
 ### External API
 Stats uses some external APIs, such as:
 
-- https://api.mac-stats.com – For update checks and retrieving the public IP address
-- https://api.github.com – Fallback for update checks
+- https://api.github.com – For update checks
+- https://api.mac-stats.com – For retrieving the public IP address
 
-Both of these APIs are used to check for updates. Additionally, an external request is required to obtain the public IP address. I do not want to use any third-party providers for retrieving the public IP address, so I use my own server for this purpose.
+GitHub is used to resolve the latest release for this fork. An external request is also required to obtain the public IP address. I do not want to use any third-party providers for retrieving the public IP address, so I use my own server for this purpose.
 
 If you have concerns about these requests, you have a few options:
 
@@ -121,4 +130,4 @@ If you have concerns about these requests, you have a few options:
 You can help by adding a new language or improving the existing translation.
 
 ## License
-[MIT License](https://github.com/exelban/stats/blob/master/LICENSE)
+[MIT License](https://github.com/MrPicklesRocks/Stats/blob/master/LICENSE)

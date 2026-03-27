@@ -2862,7 +2862,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 2.12.6;
+				MARKETING_VERSION = 2.12.7;
 				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.textd.Stats;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2899,7 +2899,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 2.12.6;
+				MARKETING_VERSION = 2.12.7;
 				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.textd.Stats;
 				PRODUCT_NAME = "$(TARGET_NAME)";
