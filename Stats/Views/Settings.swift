@@ -25,6 +25,7 @@ class SettingsWindow: NSWindow, NSWindowDelegate, NSToolbarDelegate {
     private let sidebarView: SidebarView = SidebarView(frame: NSRect(x: 0, y: 0, width: 180, height: 480))
     
     private var dashboard: NSView = Dashboard()
+    private var diagnostics: NSView = DiagnosticsView()
     private var settings: ApplicationSettings = ApplicationSettings()
     
     private var toggleButton: NSControl? = nil
@@ -187,11 +188,22 @@ class SettingsWindow: NSWindow, NSWindowDelegate, NSToolbarDelegate {
                 self.settingsPreviewButton?.isHidden = !detectedModule.config.hasPreview
                 NotificationCenter.default.post(name: .openWindow, object: nil, userInfo: ["module": detectedModule.config.name, "state": true])
             } else if title == "Dashboard" {
+                self.activeModuleName = nil
                 view = self.dashboard
                 self.toggleButton?.isHidden = true
                 self.settingsPreviewButton?.isHidden = true
                 NotificationCenter.default.post(name: .openWindow, object: nil, userInfo: ["state": false])
+            } else if title == "Diagnostics" {
+                self.activeModuleName = nil
+                if let diagnosticsView = self.diagnostics as? DiagnosticsView {
+                    diagnosticsView.refresh()
+                }
+                view = self.diagnostics
+                self.toggleButton?.isHidden = true
+                self.settingsPreviewButton?.isHidden = true
+                NotificationCenter.default.post(name: .openWindow, object: nil, userInfo: ["state": false])
             } else if title == "Settings" {
+                self.activeModuleName = nil
                 self.settings.viewWillAppear()
                 view = self.settings
                 self.toggleButton?.isHidden = true
@@ -303,6 +315,7 @@ private class SidebarView: NSStackView {
     }
     
     private var dashboardIcon: NSImage { NSImage(systemSymbolName: "circle.grid.3x3.fill", accessibilityDescription: nil)! }
+    private var diagnosticsIcon: NSImage { iconFromSymbol(name: "waveform.path.ecg", scale: .large) }
     private var settingsIcon: NSImage { iconFromSymbol(name: "gear", scale: .large) }
     private var pauseIcon: NSImage { iconFromSymbol(name: "pause.fill", scale: .large) }
     private var resumeIcon: NSImage { iconFromSymbol(name: "play.fill", scale: .large) }
@@ -322,6 +335,7 @@ private class SidebarView: NSStackView {
         spacer.heightAnchor.constraint(equalToConstant: 10).isActive = true
         
         self.scrollView.stackView.addArrangedSubview(MenuItem(icon: self.dashboardIcon, title: "Dashboard"))
+        self.scrollView.stackView.addArrangedSubview(MenuItem(icon: self.diagnosticsIcon, title: "Diagnostics"))
         self.scrollView.stackView.addArrangedSubview(spacer)
         
         let additionalButtons: NSStackView = NSStackView(frame: NSRect(x: 0, y: 0, width: frame.width, height: 45))
@@ -443,6 +457,8 @@ private class MenuItem: NSView {
             toolTip = localizedString("Open application settings")
         } else if title == "Dashboard" {
             toolTip = localizedString("Open dashboard")
+        } else if title == "Diagnostics" {
+            toolTip = localizedString("Open diagnostics")
         } else {
             toolTip = localizedString("Open \(title) settings")
         }

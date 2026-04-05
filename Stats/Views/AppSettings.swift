@@ -17,6 +17,10 @@ class ApplicationSettings: NSStackView {
         get { Store.shared.string(key: "temperature_units", defaultValue: "system") }
         set { Store.shared.set(key: "temperature_units", value: newValue) }
     }
+    private var diagnosticsEnabled: Bool {
+        get { Store.shared.bool(key: "Diagnostics_enabled", defaultValue: true) }
+        set { Store.shared.set(key: "Diagnostics_enabled", value: newValue) }
+    }
     
     private var combinedModulesState: Bool {
         get { Store.shared.bool(key: "CombinedModules", defaultValue: true) }
@@ -98,6 +102,25 @@ class ApplicationSettings: NSStackView {
                 action: #selector(self.toggleSystemWidgetsUpdatesState),
                 state: self.systemWidgetsUpdatesState
             ))
+        ]))
+        
+        scrollView.stackView.addArrangedSubview(PreferencesSection(label: localizedString("Diagnostics"), [
+            PreferencesRow(localizedString("Record diagnostics"), component: switchView(
+                action: #selector(self.toggleDiagnosticsEnabled),
+                state: self.diagnosticsEnabled
+            )),
+            PreferencesRow(
+                localizedString("Open diagnostics"),
+                component: buttonView(#selector(self.openDiagnostics), text: localizedString("Open"))
+            ),
+            PreferencesRow(
+                localizedString("Export diagnostics"),
+                component: buttonView(#selector(self.exportDiagnostics), text: localizedString("Save"))
+            ),
+            PreferencesRow(
+                localizedString("Clear diagnostics"),
+                component: buttonView(#selector(self.clearDiagnostics), text: localizedString("Reset"))
+            )
         ]))
         
         self.combinedModulesView = PreferencesSection([
@@ -211,9 +234,9 @@ class ApplicationSettings: NSStackView {
         let statsVersion: NSTextField = TextView(frame: NSRect(x: 0, y: 0, width: view.frame.width, height: 16))
         statsVersion.alignment = .center
         statsVersion.font = NSFont.systemFont(ofSize: 12, weight: .regular)
-        statsVersion.stringValue = "\(localizedString("Version")) \(versionNumber)"
+        statsVersion.stringValue = "\(localizedString("Version")) \(versionNumber) (\(localizedString("Build number")) \(buildNumber))"
         statsVersion.isSelectable = true
-        statsVersion.toolTip = "\(localizedString("Build number")) \(buildNumber)"
+        statsVersion.toolTip = "\(localizedString("Version")) \(versionNumber) • \(localizedString("Build number")) \(buildNumber)"
         
         container.addRow(with: [iconView])
         container.addRow(with: [statsName])
@@ -300,6 +323,22 @@ class ApplicationSettings: NSStackView {
         }
     }
     
+    @objc private func exportDiagnostics() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "MacStats-diagnostics.json"
+        panel.showsTagField = false
+        panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.modalPanelWindow)))
+        panel.begin { (result) in
+            guard result.rawValue == NSApplication.ModalResponse.OK.rawValue else { return }
+            if let url = panel.url, !Diagnostics.shared.export(to: url) {
+                self.showDiagnosticsAlert(
+                    title: localizedString("Export diagnostics"),
+                    text: localizedString("Unable to export diagnostics history")
+                )
+            }
+        }
+    }
+    
     @objc private func resetSettings() {
         let alert = NSAlert()
         alert.messageText = localizedString("Reset settings")
@@ -312,6 +351,26 @@ class ApplicationSettings: NSStackView {
             Store.shared.reset()
             restartApp(self)
         }
+    }
+    
+    @objc private func clearDiagnostics() {
+        let alert = NSAlert()
+        alert.messageText = localizedString("Clear diagnostics")
+        alert.informativeText = localizedString("This will delete the recorded diagnostics history.")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: localizedString("Yes"))
+        alert.addButton(withTitle: localizedString("No"))
+        
+        if alert.runModal() == .alertFirstButtonReturn && !Diagnostics.shared.clear() {
+            self.showDiagnosticsAlert(
+                title: localizedString("Clear diagnostics"),
+                text: localizedString("Unable to clear diagnostics history")
+            )
+        }
+    }
+    
+    @objc private func openDiagnostics() {
+        NotificationCenter.default.post(name: .openModuleSettings, object: nil, userInfo: ["module": "Diagnostics"])
     }
     
     @objc private func toggleUninstallHelperButton(_ notification: Notification) {
@@ -359,6 +418,19 @@ class ApplicationSettings: NSStackView {
     
     @objc private func toggleSystemWidgetsUpdatesState(_ sender: NSButton) {
         self.systemWidgetsUpdatesState = sender.state == NSControl.StateValue.on
+    }
+    
+    @objc private func toggleDiagnosticsEnabled(_ sender: NSButton) {
+        self.diagnosticsEnabled = sender.state == NSControl.StateValue.on
+    }
+    
+    private func showDiagnosticsAlert(title: String, text: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: localizedString("OK"))
+        alert.runModal()
     }
 }
 

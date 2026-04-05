@@ -13,6 +13,7 @@ import Cocoa
 import Kit
 import SystemConfiguration
 import CoreWLAN
+import Network
 
 struct ipResponse: Decodable {
     var ip: String
@@ -357,6 +358,11 @@ internal class UsageReader: Reader<Network_Usage>, CWEventDelegate {
                 }
             }
         }
+        if let global = SCDynamicStoreCopyValue(nil, "State:/Network/Global/IPv4" as CFString) as? [String: Any] {
+            self.usage.gateway = global["Router"] as? String
+        } else {
+            self.usage.gateway = nil
+        }
         
         guard self.usage.interface != nil else { return }
         
@@ -696,6 +702,36 @@ internal class ConnectivityReaderWrapper {
     }
 }
 
+private struct ConnectivityDiagnosticsState {
+    var reachabilityClass: String?
+    var quorumPassed: Bool?
+    var primaryProbeTransport: String?
+    var primaryProbeTarget: String?
+    var primaryProbeReachable: Bool?
+    var primaryProbeFailureReason: String?
+    var gatewayReachable: Bool?
+    var gatewayProbeFailureReason: String?
+    var publicProbeTarget: String?
+    var publicProbeReachable: Bool?
+    var publicProbeFailureReason: String?
+    var dnsProbeHost: String?
+    var dnsResolved: Bool?
+    var dnsFailureReason: String?
+    var httpProbeTarget: String?
+    var httpReachable: Bool?
+    var httpFailureReason: String?
+    var failureStage: String?
+    var failureReason: String?
+}
+
+private struct ReachabilityEvaluation {
+    let reachable: Bool
+    let quorumPassed: Bool
+    let reachabilityClass: String
+    let failureStage: String
+    let failureReason: String
+}
+
 // inspired by https://github.com/samiyr/SwiftyPing
 internal class ConnectivityReader: Reader<Network_Connectivity> {
     private let variablesQueue = DispatchQueue(label: "com.textd.ConnectivityReaderQueue")
@@ -713,6 +749,12 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
     private var lastHost: String = ""
     private var addr: Data? = nil
     private let timeout: TimeInterval = 5
+    private let secondaryProbeTimeout: TimeInterval = 3
+    private let publicProbeHost: String = "1.0.0.1"
+    private let publicProbePort: UInt16 = 443
+    private let fallbackDNSProbeHost: String = "captive.apple.com"
+    private let fallbackHTTPProbeTarget: String = "https://captive.apple.com"
+    private let failureProbeCooldown: TimeInterval = 5
     
     public enum ConnectivityMode: String {
         case icmp
@@ -721,6 +763,14 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
     
     private var connectivityMode: ConnectivityMode {
         ConnectivityMode(rawValue: Store.shared.string(key: "Network_connectivityMode", defaultValue: "icmp")) ?? .icmp
+    }
+
+    private var primaryProbeTransport: String {
+        self.connectivityMode.rawValue
+    }
+
+    private var primaryProbeTarget: String {
+        self.connectivityMode == .http ? self.primaryHTTPProbeTarget : self.ICMPHost
     }
     
     private var socket: CFSocket?
@@ -762,6 +812,24 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
     private var jitter: Double? {
         get { self.variablesQueue.sync { self._jitter } }
         set { self.variablesQueue.sync { self._jitter = newValue } }
+    }
+    
+    private var _diagnosticsState: ConnectivityDiagnosticsState = ConnectivityDiagnosticsState()
+    private var diagnosticsState: ConnectivityDiagnosticsState {
+        get { self.variablesQueue.sync { self._diagnosticsState } }
+        set { self.variablesQueue.sync { self._diagnosticsState = newValue } }
+    }
+    
+    private var _lastFailureProbeAt: Date = .distantPast
+    private var lastFailureProbeAt: Date {
+        get { self.variablesQueue.sync { self._lastFailureProbeAt } }
+        set { self.variablesQueue.sync { self._lastFailureProbeAt = newValue } }
+    }
+    
+    private var _isDiagnosingFailure: Bool = false
+    private var isDiagnosingFailure: Bool {
+        get { self.variablesQueue.sync { self._isDiagnosingFailure } }
+        set { self.variablesQueue.sync { self._isDiagnosingFailure = newValue } }
     }
     
     var start: DispatchTime? = nil
@@ -819,25 +887,50 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
             self.icmpCheck()
         }
         
-        if let v = self.status {
-            self.wrapper.status = v
-            if let l = self.latency {
-                self.wrapper.latency = l
-            }
-            if let j = self.jitter {
-                self.wrapper.jitter = j
-            }
-            self.callback(self.wrapper)
+        self.publishCurrentState()
+    }
+
+    private func publishCurrentState() {
+        guard let v = self.status else { return }
+
+        self.wrapper.status = v
+        if let l = self.latency {
+            self.wrapper.latency = l
         }
+        if let j = self.jitter {
+            self.wrapper.jitter = j
+        }
+
+        let diagnostics = self.diagnosticsState
+        self.wrapper.reachabilityClass = diagnostics.reachabilityClass
+        self.wrapper.quorumPassed = diagnostics.quorumPassed
+        self.wrapper.primaryProbeTransport = diagnostics.primaryProbeTransport
+        self.wrapper.primaryProbeTarget = diagnostics.primaryProbeTarget
+        self.wrapper.primaryProbeReachable = diagnostics.primaryProbeReachable
+        self.wrapper.primaryProbeFailureReason = diagnostics.primaryProbeFailureReason
+        self.wrapper.gatewayReachable = diagnostics.gatewayReachable
+        self.wrapper.gatewayProbeFailureReason = diagnostics.gatewayProbeFailureReason
+        self.wrapper.publicProbeTarget = diagnostics.publicProbeTarget
+        self.wrapper.publicProbeReachable = diagnostics.publicProbeReachable
+        self.wrapper.publicProbeFailureReason = diagnostics.publicProbeFailureReason
+        self.wrapper.dnsProbeHost = diagnostics.dnsProbeHost
+        self.wrapper.dnsResolved = diagnostics.dnsResolved
+        self.wrapper.dnsFailureReason = diagnostics.dnsFailureReason
+        self.wrapper.httpProbeTarget = diagnostics.httpProbeTarget
+        self.wrapper.httpReachable = diagnostics.httpReachable
+        self.wrapper.httpFailureReason = diagnostics.httpFailureReason
+        self.wrapper.failureStage = diagnostics.failureStage
+        self.wrapper.failureReason = diagnostics.failureReason
+        self.callback(self.wrapper)
     }
     
     private func httpCheck() {
         guard !self.isPinging else { return }
         self.isPinging = true
         
-        let urlString = self.HTTPHost.hasPrefix("http://") || self.HTTPHost.hasPrefix("https://") ? self.HTTPHost : "https://\(self.HTTPHost)"
+        let urlString = self.primaryHTTPProbeTarget
         guard let url = URL(string: urlString) else {
-            self.status = false
+            self.finishPrimaryProbe(status: false, failureReason: "http_invalid_url")
             self.isPinging = false
             return
         }
@@ -861,12 +954,15 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
             }
             self.previousLatency = elapsed
             
+            let failureReason: String?
             if let http = response as? HTTPURLResponse {
-                self.status = (200...399).contains(http.statusCode) && error == nil
+                let success = (200...399).contains(http.statusCode) && error == nil
+                failureReason = success ? nil : "http_status_\(http.statusCode)"
+                self.finishPrimaryProbe(status: success, failureReason: failureReason)
             } else {
-                self.status = false
+                failureReason = self.httpFailureReason(error)
+                self.finishPrimaryProbe(status: false, failureReason: failureReason)
             }
-            self.isPinging = false
         }
         task.resume()
     }
@@ -880,7 +976,19 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
             self.addr = self.resolve()
         }
         
-        guard !self.isPinging && self.active, let socket = self.socket, let addr = self.addr, let data = self.request() else { return }
+        guard !self.isPinging && self.active else { return }
+        guard let socket = self.socket else {
+            self.finishPrimaryProbe(status: false, failureReason: "icmp_socket_unavailable")
+            return
+        }
+        guard let addr = self.addr else {
+            self.finishPrimaryProbe(status: false, failureReason: "icmp_target_unresolved")
+            return
+        }
+        guard let data = self.request() else {
+            self.finishPrimaryProbe(status: false, failureReason: "icmp_request_failed")
+            return
+        }
         self.isPinging = true
         
         let timer = Timer(timeInterval: self.timeout, target: self, selector: #selector(self.timeoutCallback), userInfo: nil, repeats: false)
@@ -895,11 +1003,14 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
     }
     
     @objc private func timeoutCallback() {
-        self.status = false
-        self.isPinging = false
+        self.finishPrimaryProbe(status: false, failureReason: "icmp_timeout")
     }
     
     private func socketCallback(data: Data? = nil, error: CFSocketError? = nil) {
+        if let error {
+            self.finishPrimaryProbe(status: false, failureReason: "icmp_socket_error_\(error.rawValue)")
+            return
+        }
         guard let data = data, validateResponse(data) else { return }
         let end = DispatchTime.now()
         
@@ -915,10 +1026,7 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
         }
         self.previousLatency = self.latency
         
-        self.status = error == nil
-        self.isPinging = false
-        self.timeoutTimer?.invalidate()
-        self.timeoutTimer = nil
+        self.finishPrimaryProbe(status: true)
     }
     
     // MARK: - helpers
@@ -998,6 +1106,322 @@ internal class ConnectivityReader: Reader<Network_Connectivity> {
             }
         }
         return nil
+    }
+    
+    private func finishPrimaryProbe(status: Bool, failureReason: String? = nil) {
+        self.isPinging = false
+        self.timeoutTimer?.invalidate()
+        self.timeoutTimer = nil
+        
+        if status {
+            self.status = true
+            self.diagnosticsState = ConnectivityDiagnosticsState(
+                reachabilityClass: "healthy",
+                quorumPassed: true,
+                primaryProbeTransport: self.primaryProbeTransport,
+                primaryProbeTarget: self.primaryProbeTarget,
+                primaryProbeReachable: true,
+                primaryProbeFailureReason: nil,
+                gatewayReachable: nil,
+                gatewayProbeFailureReason: nil,
+                publicProbeTarget: nil,
+                publicProbeReachable: nil,
+                publicProbeFailureReason: nil,
+                dnsProbeHost: nil,
+                dnsResolved: nil,
+                dnsFailureReason: nil,
+                httpProbeTarget: nil,
+                httpReachable: nil,
+                httpFailureReason: nil,
+                failureStage: nil,
+                failureReason: nil
+            )
+            return
+        }
+        
+        self.updateDiagnosticsState {
+            $0.reachabilityClass = "diagnosing"
+            $0.quorumPassed = false
+            $0.primaryProbeTransport = self.primaryProbeTransport
+            $0.primaryProbeTarget = self.primaryProbeTarget
+            $0.primaryProbeReachable = false
+            $0.primaryProbeFailureReason = failureReason ?? "probe_failed"
+            $0.publicProbeTarget = "\(self.publicProbeHost):\(self.publicProbePort)"
+            $0.dnsProbeHost = self.dnsProbeHost
+            $0.httpProbeTarget = self.httpProbeTarget
+            $0.failureStage = "primary_probe"
+            $0.failureReason = failureReason ?? "probe_failed"
+        }
+        self.runFailureDiagnosisIfNeeded(primaryFailureReason: failureReason ?? "probe_failed")
+    }
+    
+    private func runFailureDiagnosisIfNeeded(primaryFailureReason: String) {
+        let shouldRun = self.variablesQueue.sync { () -> Bool in
+            if self._isDiagnosingFailure {
+                return false
+            }
+            if Date().timeIntervalSince(self._lastFailureProbeAt) < self.failureProbeCooldown {
+                return false
+            }
+            self._isDiagnosingFailure = true
+            self._lastFailureProbeAt = Date()
+            return true
+        }
+        guard shouldRun else { return }
+        
+        let gatewayHost = self.defaultGatewayAddress
+        let publicTarget = "\(self.publicProbeHost):\(self.publicProbePort)"
+        let dnsHost = self.dnsProbeHost
+        let httpTarget = self.httpProbeTarget
+        
+        DispatchQueue.global(qos: .utility).async {
+            let gatewayReachable = gatewayHost.flatMap { self.reachabilityCheck(host: $0) }
+            let publicReachable = self.tcpCheck(host: self.publicProbeHost, port: self.publicProbePort, timeout: self.secondaryProbeTimeout)
+            let dnsResolved = self.resolveHost(dnsHost)
+            let httpReachable = self.httpCheckSync(urlString: httpTarget, timeout: self.secondaryProbeTimeout)
+
+            let evaluation = self.evaluateReachability(
+                gatewayReachable: gatewayReachable,
+                publicReachable: publicReachable,
+                dnsResolved: dnsResolved,
+                httpReachable: httpReachable,
+                primaryFailureReason: primaryFailureReason
+            )
+
+            guard self.diagnosticsState.primaryProbeReachable == false else {
+                self.isDiagnosingFailure = false
+                return
+            }
+
+            self.status = evaluation.reachable
+            self.updateDiagnosticsState {
+                $0.reachabilityClass = evaluation.reachabilityClass
+                $0.quorumPassed = evaluation.quorumPassed
+                $0.gatewayReachable = gatewayReachable
+                $0.gatewayProbeFailureReason = gatewayHost != nil && gatewayReachable == false ? "default_gateway_unreachable" : nil
+                $0.publicProbeTarget = publicTarget
+                $0.publicProbeReachable = publicReachable
+                $0.publicProbeFailureReason = publicReachable ? nil : "public_ip_probe_failed"
+                $0.dnsProbeHost = dnsHost
+                $0.dnsResolved = dnsResolved
+                $0.dnsFailureReason = dnsResolved ? nil : "dns_resolution_failed"
+                $0.httpProbeTarget = httpTarget
+                $0.httpReachable = httpReachable
+                $0.httpFailureReason = httpReachable ? nil : "http_probe_failed"
+                $0.failureStage = evaluation.failureStage
+                $0.failureReason = evaluation.failureReason
+            }
+            self.isDiagnosingFailure = false
+            DispatchQueue.main.async {
+                self.publishCurrentState()
+            }
+        }
+    }
+
+    private func evaluateReachability(
+        gatewayReachable: Bool?,
+        publicReachable: Bool,
+        dnsResolved: Bool,
+        httpReachable: Bool,
+        primaryFailureReason: String
+    ) -> ReachabilityEvaluation {
+        let successCount = [publicReachable, dnsResolved, httpReachable].filter { $0 }.count
+        let quorumPassed = httpReachable || successCount >= 2
+        let reachable = successCount >= 1
+
+        if reachable {
+            if httpReachable && dnsResolved && publicReachable {
+                return ReachabilityEvaluation(
+                    reachable: true,
+                    quorumPassed: quorumPassed,
+                    reachabilityClass: "probe_target_failure",
+                    failureStage: "probe_target",
+                    failureReason: primaryFailureReason
+                )
+            }
+
+            if httpReachable && dnsResolved && !publicReachable {
+                return ReachabilityEvaluation(
+                    reachable: true,
+                    quorumPassed: quorumPassed,
+                    reachabilityClass: "partial_outage",
+                    failureStage: "upstream",
+                    failureReason: "public_ip_probe_failed"
+                )
+            }
+
+            if httpReachable && !dnsResolved {
+                return ReachabilityEvaluation(
+                    reachable: true,
+                    quorumPassed: quorumPassed,
+                    reachabilityClass: "dns_failure",
+                    failureStage: "dns",
+                    failureReason: "dns_resolution_failed"
+                )
+            }
+
+            if publicReachable && dnsResolved && !httpReachable {
+                return ReachabilityEvaluation(
+                    reachable: true,
+                    quorumPassed: quorumPassed,
+                    reachabilityClass: "http_failure",
+                    failureStage: "http",
+                    failureReason: "http_probe_failed"
+                )
+            }
+
+            return ReachabilityEvaluation(
+                reachable: true,
+                quorumPassed: quorumPassed,
+                reachabilityClass: "partial_outage",
+                failureStage: publicReachable ? "http" : "upstream",
+                failureReason: publicReachable ? "http_probe_failed" : "public_ip_probe_failed"
+            )
+        }
+
+        if gatewayReachable == false {
+            return ReachabilityEvaluation(
+                reachable: false,
+                quorumPassed: false,
+                reachabilityClass: "gateway_down",
+                failureStage: "gateway",
+                failureReason: "default_gateway_unreachable"
+            )
+        }
+
+        return ReachabilityEvaluation(
+            reachable: false,
+            quorumPassed: false,
+            reachabilityClass: "upstream_down",
+            failureStage: "upstream",
+            failureReason: "public_ip_probe_failed"
+        )
+    }
+    
+    private func updateDiagnosticsState(_ mutate: (inout ConnectivityDiagnosticsState) -> Void) {
+        self.variablesQueue.sync {
+            mutate(&self._diagnosticsState)
+        }
+    }
+    
+    private var defaultGatewayAddress: String? {
+        if let global = SCDynamicStoreCopyValue(nil, "State:/Network/Global/IPv4" as CFString) as? [String: Any] {
+            return global["Router"] as? String
+        }
+        return nil
+    }
+    
+    private var primaryHTTPProbeTarget: String {
+        let raw = self.HTTPHost.isEmpty ? self.fallbackHTTPProbeTarget : self.HTTPHost
+        return self.normalizeHTTPHost(raw)
+    }
+
+    private var httpProbeTarget: String {
+        self.connectivityMode == .http ? self.fallbackHTTPProbeTarget : self.primaryHTTPProbeTarget
+    }
+    
+    private var dnsProbeHost: String {
+        guard let host = self.host(from: self.httpProbeTarget), !self.isIPAddress(host) else {
+            return self.fallbackDNSProbeHost
+        }
+        return host
+    }
+    
+    private func normalizeHTTPHost(_ value: String) -> String {
+        if value.hasPrefix("http://") || value.hasPrefix("https://") {
+            return value
+        }
+        return "https://\(value)"
+    }
+    
+    private func host(from value: String) -> String? {
+        URL(string: value)?.host
+    }
+    
+    private func isIPAddress(_ value: String) -> Bool {
+        var ipv4 = in_addr()
+        var ipv6 = in6_addr()
+        return value.withCString { inet_pton(AF_INET, $0, &ipv4) } == 1 ||
+            value.withCString { inet_pton(AF_INET6, $0, &ipv6) } == 1
+    }
+    
+    private func reachabilityCheck(host: String) -> Bool? {
+        guard let reachability = SCNetworkReachabilityCreateWithName(nil, host) else { return nil }
+        var flags = SCNetworkReachabilityFlags()
+        guard SCNetworkReachabilityGetFlags(reachability, &flags) else { return nil }
+        return flags.contains(.reachable) && !flags.contains(.connectionRequired)
+    }
+    
+    private func resolveHost(_ host: String) -> Bool {
+        var streamError = CFStreamError()
+        let cfhost = CFHostCreateWithName(nil, host as CFString).takeRetainedValue()
+        guard CFHostStartInfoResolution(cfhost, .addresses, &streamError) else { return false }
+        var success: DarwinBoolean = false
+        guard let addresses = CFHostGetAddressing(cfhost, &success)?.takeUnretainedValue() as? [Data] else {
+            return false
+        }
+        return !addresses.isEmpty
+    }
+    
+    private func tcpCheck(host: String, port: UInt16, timeout: TimeInterval) -> Bool {
+        guard let nwPort = NWEndpoint.Port(rawValue: port) else { return false }
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        let connection = NWConnection(host: NWEndpoint.Host(host), port: nwPort, using: .tcp)
+        let queue = DispatchQueue(label: "com.textd.MacStats.NetworkProbe.\(host).\(port)")
+        var reachable = false
+        
+        connection.stateUpdateHandler = { state in
+            switch state {
+            case .ready:
+                reachable = true
+                connection.cancel()
+                semaphore.signal()
+            case .failed(_), .cancelled:
+                semaphore.signal()
+            default:
+                break
+            }
+        }
+        connection.start(queue: queue)
+        
+        let result = semaphore.wait(timeout: .now() + timeout)
+        if result == .timedOut {
+            connection.cancel()
+            return false
+        }
+        return reachable
+    }
+    
+    private func httpCheckSync(urlString: String, timeout: TimeInterval) -> Bool {
+        guard let url = URL(string: urlString) else { return false }
+        
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeout)
+        request.httpMethod = "HEAD"
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        var reachable = false
+        let task = URLSession.shared.dataTask(with: request) { _, response, error in
+            if let http = response as? HTTPURLResponse, (200...399).contains(http.statusCode), error == nil {
+                reachable = true
+            }
+            semaphore.signal()
+        }
+        task.resume()
+        
+        let result = semaphore.wait(timeout: .now() + timeout + 1)
+        if result == .timedOut {
+            task.cancel()
+            return false
+        }
+        return reachable
+    }
+    
+    private func httpFailureReason(_ error: Error?) -> String {
+        guard let error = error as NSError? else {
+            return "http_no_response"
+        }
+        return "url_error_\(error.code)"
     }
     
     private func openConn() {

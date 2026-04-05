@@ -76,6 +76,7 @@ public struct Network_Usage: Codable, RemoteType {
     var raddr: Network_addr = Network_addr() // remote ip
     
     var dns: [String] = []
+    var gateway: String? = nil
     
     var interface: Network_interface? = nil
     var connectionType: Network_t? = nil
@@ -90,6 +91,7 @@ public struct Network_Usage: Codable, RemoteType {
         self.raddr = Network_addr()
         
         self.dns = []
+        self.gateway = nil
         
         self.interface = nil
         self.connectionType = nil
@@ -108,6 +110,25 @@ public struct Network_Connectivity: Codable {
     var status: Bool = false
     var latency: Double = 0
     var jitter: Double = 0
+    var reachabilityClass: String? = nil
+    var quorumPassed: Bool? = nil
+    var primaryProbeTransport: String? = nil
+    var primaryProbeTarget: String? = nil
+    var primaryProbeReachable: Bool? = nil
+    var primaryProbeFailureReason: String? = nil
+    var gatewayReachable: Bool? = nil
+    var gatewayProbeFailureReason: String? = nil
+    var publicProbeTarget: String? = nil
+    var publicProbeReachable: Bool? = nil
+    var publicProbeFailureReason: String? = nil
+    var dnsProbeHost: String? = nil
+    var dnsResolved: Bool? = nil
+    var dnsFailureReason: String? = nil
+    var httpProbeTarget: String? = nil
+    var httpReachable: Bool? = nil
+    var httpFailureReason: String? = nil
+    var failureStage: String? = nil
+    var failureReason: String? = nil
 }
 
 public struct Network_Process: Codable, Process_p {
@@ -158,6 +179,15 @@ public class Network: Module {
     }
     private var publicIPRefreshInterval: String {
         Store.shared.string(key: "\(self.name)_publicIPRefreshInterval", defaultValue: "never")
+    }
+    private var connectivityMode: String {
+        Store.shared.string(key: "\(self.name)_connectivityMode", defaultValue: "icmp")
+    }
+    private var connectivityTarget: String {
+        if self.connectivityMode == "http" {
+            return Store.shared.string(key: "\(self.name)_HTTPHost", defaultValue: "https://google.com")
+        }
+        return Store.shared.string(key: "\(self.name)_ICMPHost", defaultValue: "1.1.1.1")
     }
     private var textValue: String {
         Store.shared.string(key: "\(self.name)_textWidgetValue", defaultValue: "$addr.public - $status")
@@ -243,6 +273,31 @@ public class Network: Module {
         self.popupView.usageCallback(value)
         self.portalView.usageCallback(value)
         self.notificationsView.usageCallback(value)
+        Diagnostics.shared.recordNetworkUsage(
+            DiagnosticsNetworkUsageSnapshot(
+                interfaceBSDName: value.interface?.BSDName,
+                interfaceStatus: value.interface?.status,
+                reachabilityStatus: value.status,
+                connectionType: value.connectionType?.rawValue,
+                localIPAddress: value.laddr.v4 ?? value.laddr.v6,
+                publicIPAddress: value.raddr.v4 ?? value.raddr.v6,
+                gatewayAddress: value.gateway,
+                dnsServers: value.dns,
+                ssid: value.wifiDetails.ssid,
+                bssid: value.wifiDetails.bssid,
+                rssi: value.wifiDetails.RSSI,
+                noise: value.wifiDetails.noise,
+                wifiStandard: value.wifiDetails.standard,
+                wifiMode: value.wifiDetails.mode,
+                wifiSecurity: value.wifiDetails.security,
+                wifiChannel: value.wifiDetails.channel,
+                wifiChannelBand: value.wifiDetails.channelBand,
+                wifiChannelWidth: value.wifiDetails.channelWidth,
+                wifiChannelNumber: value.wifiDetails.channelNumber,
+                uploadBytesPerSecond: value.bandwidth.upload,
+                downloadBytesPerSecond: value.bandwidth.download
+            )
+        )
         
         var upload: Int64 = value.bandwidth.upload
         var download: Int64 = value.bandwidth.download
@@ -349,6 +404,34 @@ public class Network: Module {
         
         self.popupView.connectivityCallback(value)
         self.notificationsView.connectivityCallback(value)
+        Diagnostics.shared.recordNetworkConnectivity(
+            DiagnosticsNetworkConnectivitySnapshot(
+                reachable: value.status,
+                latencyMs: value.latency,
+                jitterMs: value.jitter,
+                mode: self.connectivityMode,
+                target: self.connectivityTarget,
+                reachabilityClass: value.reachabilityClass,
+                quorumPassed: value.quorumPassed,
+                primaryProbeTransport: value.primaryProbeTransport,
+                primaryProbeTarget: value.primaryProbeTarget,
+                primaryProbeReachable: value.primaryProbeReachable,
+                primaryProbeFailureReason: value.primaryProbeFailureReason,
+                gatewayReachable: value.gatewayReachable,
+                gatewayProbeFailureReason: value.gatewayProbeFailureReason,
+                publicProbeTarget: value.publicProbeTarget,
+                publicProbeReachable: value.publicProbeReachable,
+                publicProbeFailureReason: value.publicProbeFailureReason,
+                dnsProbeHost: value.dnsProbeHost,
+                dnsResolved: value.dnsResolved,
+                dnsFailureReason: value.dnsFailureReason,
+                httpProbeTarget: value.httpProbeTarget,
+                httpReachable: value.httpReachable,
+                httpFailureReason: value.httpFailureReason,
+                failureStage: value.failureStage,
+                failureReason: value.failureReason
+            )
+        )
         
         self.menuBar.widgets.filter{ $0.isActive }.forEach { (w: SWidget) in
             switch w.item {

@@ -285,6 +285,22 @@ public class Disk: Module {
             self.popupView.capacityCallback(value)
         })
         self.settingsView.setList(value)
+        Diagnostics.shared.recordDiskSnapshots(
+            self.capacityReader?.diagnosticsSnapshots() ?? value.map { disk in
+                DiagnosticsDiskSnapshot(
+                    identifier: disk.uuid,
+                    name: disk.mediaName,
+                    mounted: true,
+                    totalBytes: disk.size,
+                    freeBytes: disk.free,
+                    utilization: disk.percentage,
+                    smartTemperature: disk.smart?.temperature,
+                    smartLife: disk.smart?.life,
+                    smartPowerCycles: disk.smart?.powerCycles,
+                    smartPowerOnHours: disk.smart?.powerOnHours
+                )
+            }
+        )
         
         guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {
             return
@@ -353,6 +369,16 @@ public class Disk: Module {
         DispatchQueue.main.async(execute: {
             self.popupView.activityCallback(value)
         })
+        Diagnostics.shared.recordDiskSnapshots(
+            value.map { disk in
+                DiagnosticsDiskSnapshot(
+                    identifier: disk.uuid,
+                    name: disk.mediaName,
+                    readBytesPerSecond: disk.activity.read,
+                    writeBytesPerSecond: disk.activity.write
+                )
+            }
+        )
         
         guard let d = value.first(where: { $0.mediaName == self.selectedDisk }) ?? value.first(where: { $0.root }) else {
             return

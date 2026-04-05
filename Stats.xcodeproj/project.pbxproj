@@ -52,6 +52,8 @@
 		5C4E8BBF2B6EEEE800F148B6 /* db.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BB02B6EEEE800F148B6 /* db.h */; };
 		5C4E8BC42B6EF65E00F148B6 /* libleveldb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C4E8BC32B6EF65E00F148B6 /* libleveldb.a */; };
 		5C4E8BC72B6EF98800F148B6 /* DB.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4E8BC62B6EF98800F148B6 /* DB.swift */; };
+		6A18E0012F00000100D1A001 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A18E0032F00000100D1A001 /* Diagnostics.swift */; };
+		6A18E0022F00000100D1A001 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 6A18E0042F00000100D1A001 /* libsqlite3.tbd */; };
 		5C4E8BE92B71031A00F148B6 /* Kit.h in Headers */ = {isa = PBXBuildFile; fileRef = 5C4E8BE82B7102A700F148B6 /* Kit.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		5C621D822B4770D6004ED7AF /* process.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C621D812B4770D6004ED7AF /* process.swift */; };
 		5C645BFF2C591F6600D8342A /* widget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C645BFE2C591F6600D8342A /* widget.swift */; };
@@ -85,6 +87,7 @@
 		5EC1B2E52E2FEAFB007042A6 /* UnitedWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC1B2E42E2FEAFB007042A6 /* UnitedWidget.swift */; };
 		5EE8037F29C36BDD0063D37D /* portal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE8037E29C36BDD0063D37D /* portal.swift */; };
 		9A045EB72594F8D100ED58F2 /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A045EB62594F8D100ED58F2 /* Dashboard.swift */; };
+		6A18E0052F00000100D1A001 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A18E0062F00000100D1A001 /* Diagnostics.swift */; };
 		9A11AAD6266FD77F000C1C05 /* Bluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A11AACF266FD77F000C1C05 /* Bluetooth.framework */; };
 		9A11AAD7266FD77F000C1C05 /* Bluetooth.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A11AACF266FD77F000C1C05 /* Bluetooth.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9A11AAF4266FD7A7000C1C05 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A11AAF3266FD7A7000C1C05 /* main.swift */; };
@@ -540,6 +543,8 @@
 		5C4E8BB02B6EEEE800F148B6 /* db.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = db.h; sourceTree = "<group>"; };
 		5C4E8BC32B6EF65E00F148B6 /* libleveldb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libleveldb.a; sourceTree = "<group>"; };
 		5C4E8BC62B6EF98800F148B6 /* DB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DB.swift; sourceTree = "<group>"; };
+		6A18E0032F00000100D1A001 /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
+		6A18E0042F00000100D1A001 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		5C4E8BE82B7102A700F148B6 /* Kit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Kit.h; sourceTree = "<group>"; };
 		5C621D812B4770D6004ED7AF /* process.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = process.swift; sourceTree = "<group>"; };
 		5C645BFE2C591F6600D8342A /* widget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = widget.swift; sourceTree = "<group>"; };
@@ -646,6 +651,7 @@
 		9A6EEBBD2685259500897371 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logger.swift; sourceTree = "<group>"; };
 		9A81C74B24499C7000825D92 /* AppSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		9A81C74C24499C7000825D92 /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		6A18E0062F00000100D1A001 /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		9A81C7562449A41400825D92 /* RAM.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RAM.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A81C7592449A41400825D92 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A81C7672449A43600825D92 /* main.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -779,6 +785,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C4E8BC42B6EF65E00F148B6 /* libleveldb.a in Frameworks */,
+				6A18E0022F00000100D1A001 /* libsqlite3.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1122,6 +1129,7 @@
 				9A81C74C24499C7000825D92 /* Settings.swift */,
 				9A045EB62594F8D100ED58F2 /* Dashboard.swift */,
 				9A81C74B24499C7000825D92 /* AppSettings.swift */,
+				6A18E0062F00000100D1A001 /* Diagnostics.swift */,
 				9A9EA9442476D34500E3B883 /* Update.swift */,
 				9A83526E2889A03100791BAC /* Setup.swift */,
 				5C2016422D36D0EF0049C788 /* Support.swift */,
@@ -1183,6 +1191,7 @@
 			isa = PBXGroup;
 			children = (
 				5C1E45552D11D66200525864 /* libIOReport.tbd */,
+				6A18E0042F00000100D1A001 /* libsqlite3.tbd */,
 				9ADE7005265D039300D2FBA8 /* IOKit.framework */,
 				9A97CE2A25371B2300742D8F /* IntelPowerGadget.framework */,
 				9A998CD922A199970087ADE7 /* ServiceManagement.framework */,
@@ -1205,6 +1214,7 @@
 				9A5A8446271895B700BC40A4 /* Reachability.swift */,
 				9A302613286A2A3B00B41D57 /* Repeater.swift */,
 				5C4E8BC62B6EF98800F148B6 /* DB.swift */,
+				6A18E0032F00000100D1A001 /* Diagnostics.swift */,
 			);
 			path = plugins;
 			sourceTree = "<group>";
@@ -2067,6 +2077,7 @@
 				9AABEB7A243FD26200668CB0 /* AppDelegate.swift in Sources */,
 				9A9EA9452476D34500E3B883 /* Update.swift in Sources */,
 				9A045EB72594F8D100ED58F2 /* Dashboard.swift in Sources */,
+				6A18E0052F00000100D1A001 /* Diagnostics.swift in Sources */,
 				9A81C74E24499C7000825D92 /* Settings.swift in Sources */,
 				9A81C74D24499C7000825D92 /* AppSettings.swift in Sources */,
 				5C21D80B296C7B81005BA16D /* CombinedView.swift in Sources */,
@@ -2111,6 +2122,7 @@
 				5CF2210D2B1E7EAF006C583F /* notifications.swift in Sources */,
 				9A6EEBBE2685259500897371 /* Logger.swift in Sources */,
 				5C4E8BC72B6EF98800F148B6 /* DB.swift in Sources */,
+				6A18E0012F00000100D1A001 /* Diagnostics.swift in Sources */,
 				9A2847602666AA2700EC1F6D /* NetworkChart.swift in Sources */,
 				5C23BC0429A014AC00DBA990 /* portal.swift in Sources */,
 				9A2847792666AA5000EC1F6D /* module.swift in Sources */,
@@ -2439,7 +2451,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 802;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = VP7482W8W6;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -2454,7 +2466,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 3.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.textd.MacStats.Clock;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2476,7 +2488,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 802;
 				DEFINES_MODULE = YES;
 				DEVELOPMENT_TEAM = VP7482W8W6;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -2491,7 +2503,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 3.0.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.textd.MacStats.Clock;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -2863,7 +2875,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.0.4;
 				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.textd.MacStats;
 				PRODUCT_NAME = MacStats;
@@ -2901,7 +2913,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
-				MARKETING_VERSION = 3.0;
+				MARKETING_VERSION = 3.0.4;
 				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.textd.MacStats;
 				PRODUCT_NAME = MacStats;
